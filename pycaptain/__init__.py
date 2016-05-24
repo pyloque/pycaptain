@@ -1,1 +1,2 @@
-from .client import ServiceItem, CaptainClient, IServiceObserver
+from .client import CaptainClient, IServiceObserver
+from .service import ServiceItem

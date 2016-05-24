@@ -7,84 +7,18 @@ captain client implementation
 import time
 import atexit
 import random
-import threading
 import traceback
 import requests
 from requests.exceptions import RequestException
 
-
-class CaptainError(Exception):
-    '''
-    customize error
-    '''
-    pass
-
-
-class ServiceItem(object):
-    '''
-    service definition
-    '''
-
-    def __init__(self, host, port, ttl=30):
-        self.host = host
-        self.port = port
-        self.ttl = ttl
-
-    @property
-    def url_root(self):
-        '''
-        http url prefix
-        '''
-        return "http://%s:%s" % (self.host, self.port)
-
-
-class LocalService(object):
-    '''
-    keep service information in memory
-    '''
-
-    def __init__(self):
-        self.global_version = -1
-        self.versions = {}
-        self.service_lists = {}
-
-    def get_version(self, name):
-        '''
-        get local service version
-        '''
-        return self.versions.get(name, -1)
-
-    def set_version(self, name, v):
-        '''
-        update local service version
-        '''
-        self.versions[name] = v
-
-    def replace_service(self, name, services):
-        '''
-        update local services
-        '''
-        self.service_lists[name] = services
-
-    def init_service(self, name):
-        '''
-        initiaze service list
-        '''
-        self.service_lists[name] = []
-
-    def random_service(self, name):
-        '''
-        select a service randomly
-        '''
-        services = self.service_lists[name]
-        if not services:
-            raise CaptainError("no service provided")
-        ind = random.randint(0, len(services) - 1)
-        return services[ind]
+from .service import LocalService, ServiceItem
+from .keeper import ServiceKeeper
 
 
 class IServiceObserver(object):
-
+    '''
+    service state callback
+    '''
     def ready(self, name):
         pass
 
@@ -95,56 +29,10 @@ class IServiceObserver(object):
         pass
 
 
-class ServiceKeeper(object):
-    '''
-    service keeper thread
-    '''
-    def __init__(self, client, ttl):
-        self.client = client
-        self.ttl = ttl
-        self.last_keep_ts = 0
-        self.stop = False
-
-    def start(self):
-        t = threading.Thread(target=self.loop)
-        t.daemon = True
-        t.start()
-
-    def loop(self):
-        while not self.stop:
-            self.client.shuffle_url_root()
-            try:
-                self.watch()
-            except RequestException:
-                traceback.print_exc()
-            try:
-                self.keep()
-            except RequestException:
-                traceback.print_exc()
-            time.sleep(1)
-
-    def watch(self):
-        if not self.client.check_dirty():
-            return
-        dirties = self.client.check_versions()
-        for name in dirties:
-            self.client.reload_service(name)
-
-    def keep(self):
-        now = int(time.time())
-        if now - self.last_keep_ts > self.ttl:
-            self.client.keep_service()
-            self.last_keep_ts = now
-
-    def quit(self):
-        self.stop = True
-
-
 class CaptainClient(object):
     '''
     captain client implementation
     '''
-
     def __init__(self, origins):
         self.origins = []
         for host, port in origins.items():

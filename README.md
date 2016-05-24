@@ -1,6 +1,8 @@
 Use Captain Python Client
 ---------------------------
 ```
+git clone github.com/pyloque/pycaptain.git
+
 from pycaptain import CaptainClient, ServiceItem, IServiceObserver
 
 
