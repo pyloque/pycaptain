@@ -1,3 +1,11 @@
+Captain
+--------------------------
+Captain is yet another service discovery implementation based on redis.
+Captain sacrifices a little high availability for simplicity and performance.
+In most cases, we dont have so many machines as google/amazon.
+The possibility of machine crashing is very low, high Availability is not so abviously important yet.
+But the market only provides zookeeper/etcd/consul, they are complex, at least much complexer compared with captain.
+
 Use Captain Python Client
 ---------------------------
 ```python
@@ -11,6 +19,8 @@ class ServiceCallback(IServiceObserver):
 
     def all_online(self):
         print "service4 is all ready"
+        print client.select("service1").url_root() // client can use the service now
+        print client.select("service2").url_root()
 
     def offline(self, name):
         print name, "is offline"
