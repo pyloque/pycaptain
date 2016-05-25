@@ -34,10 +34,11 @@ class CaptainClient(object):
     captain client implementation
     '''
     def __init__(self, origins):
-        self.origins.extend(origins)
+        self.origins = origins
         self.local = LocalService()
         self.keeper = ServiceKeeper(self)
         self.watched = {}
+        self.failovers = {}
         self.provided = {}
         self.observers = []
         self._url_root = ""
@@ -47,7 +48,7 @@ class CaptainClient(object):
         '''
         build from single endpoint
         '''
-        return cls({host: port})
+        return cls([ServiceItem(host, port)])
 
     def shuffle_url_root(self):
         '''
@@ -130,13 +131,6 @@ class CaptainClient(object):
             url = self.url_root + "/api/service/cancel"
             requests.get(url, params=params)
 
-    def heartbeat(self, ttl):
-        '''
-        config heartbeat period
-        '''
-        self.keeper.ttl = ttl
-        return self
-
     def watch(self, *names):
         '''
         watch service
@@ -144,6 +138,13 @@ class CaptainClient(object):
         for name in names:
             self.watched[name] = False
             self.local.init_service(name)
+        return self
+
+    def failover(self, name, *items):
+        '''
+        add backup services incase no dependent services provided
+        '''
+        self.failovers.put(name, items)
         return self
 
     def provide(self, name, service):
@@ -157,7 +158,7 @@ class CaptainClient(object):
         '''
         select a service for name
         '''
-        return self.local.random_service(name)
+        return self.local.random_service(name, self.failovers.get(name))
 
     def observe(self, observer):
         '''

@@ -65,12 +65,14 @@ class LocalService(object):
         '''
         self.service_lists[name] = []
 
-    def random_service(self, name):
+    def random_service(self, name, failovers):
         '''
         select a service randomly
         '''
         services = self.service_lists[name]
         if not services:
-            raise CaptainError("no service provided for name=" + name)
+            if not failovers:
+                raise CaptainError("no service provided for name=" + name)
+            services = failovers
         ind = random.randint(0, len(services) - 1)
         return services[ind]

@@ -31,6 +31,7 @@ class ServiceCallback(IServiceObserver):
 client = CaptainClient([ServiceItem("localhost", 6789), ServiceItem("localhost", 6790)])
 # client = CaptainClient.origin("localhost", 6789) connect to single captain server
 (client.watch("service1", "service2", "service3") # define service dependencies
+    .failover("service1", ServiceItem("localhost", 6100), ServiceItem("localhost", 6101)) # backup services
     .provide("service4", ServiceItem("localhost", 6400)) # provide service
     .observe(ServiceCallback()) # add observer for dependent service's event
     .keepalive(10) # set keepalive heartbeat in seconds for provided service
