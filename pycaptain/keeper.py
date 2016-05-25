@@ -14,9 +14,10 @@ class ServiceKeeper(object):
     '''
     service keeper thread
     '''
-    def __init__(self, client, ttl):
+    def __init__(self, client):
         self.client = client
-        self.ttl = ttl
+        self.keepalive = 10
+        self.check_interval = 1000
         self.last_keep_ts = 0
         self.stop = False
 
@@ -36,7 +37,7 @@ class ServiceKeeper(object):
                 self.keep()
             except RequestException:
                 traceback.print_exc()
-            time.sleep(1)
+            time.sleep(self.check_interval/1000.0)
 
     def watch(self):
         if not self.client.check_dirty():
@@ -47,7 +48,7 @@ class ServiceKeeper(object):
 
     def keep(self):
         now = int(time.time())
-        if now - self.last_keep_ts > self.ttl:
+        if now - self.last_keep_ts > self.keepalive:
             self.client.keep_service()
             self.last_keep_ts = now
 

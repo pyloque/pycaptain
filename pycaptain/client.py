@@ -19,10 +19,10 @@ class IServiceObserver(object):
     '''
     service state callback
     '''
-    def ready(self, name):
+    def online(self, name):
         pass
 
-    def all_ready(self):
+    def all_online(self):
         pass
 
     def offline(self, name):
@@ -34,11 +34,9 @@ class CaptainClient(object):
     captain client implementation
     '''
     def __init__(self, origins):
-        self.origins = []
-        for host, port in origins.items():
-            self.origins.append(ServiceItem(host, port))
+        self.origins.extend(origins)
         self.local = LocalService()
-        self.keeper = ServiceKeeper(self, 10)  # heartbeat default to 10s
+        self.keeper = ServiceKeeper(self)
         self.watched = {}
         self.provided = {}
         self.observers = []
@@ -103,7 +101,7 @@ class CaptainClient(object):
         self.local.set_version(name, js["version"])
         self.local.replace_service(name, services)
         if not self.healthy(name) and services:
-            self.ready(name)
+            self.online(name)
         if self.healthy(name) and not services:
             self.offline(name)
 
@@ -168,16 +166,16 @@ class CaptainClient(object):
         self.observers.append(observer)
         return self
 
-    def ready(self, name):
+    def online(self, name):
         '''
         service is ready, revoke callbacks
         '''
         oldstate = self.all_healthy()
         self.watched[name] = True
         for observer in self.observers:
-            observer.ready(name)
+            observer.online(name)
         if not oldstate and self.all_healthy():
-            observer.all_ready()
+            observer.all_online()
 
     def offline(self, name):
         '''
@@ -199,6 +197,18 @@ class CaptainClient(object):
         '''
         return all(self.watched.values())
 
+    def keepalive(self, keepalive):
+        '''
+        set keeplive interval in seconds for provided service
+        '''
+        self.keeper.keepalive = keepalive
+
+    def check_interval(self, interval):
+        '''
+        set check interval in milliseconds for watched services
+        '''
+        self.keeper.check_interval = interval
+
     def start(self):
         '''
         start captain client
@@ -206,7 +216,7 @@ class CaptainClient(object):
         self.keeper.start()
         if not self.watched:
             for observer in self.observers:
-                observer.all_ready()
+                observer.all_online()
 
     def stop_on_exit(self):
         '''

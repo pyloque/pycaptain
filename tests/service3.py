@@ -5,10 +5,10 @@ from pycaptain import CaptainClient, ServiceItem, IServiceObserver
 
 class ServiceCallback(IServiceObserver):
 
-    def ready(self, name):
+    def online(self, name):
         print name, "is ready"
 
-    def all_ready(self):
+    def all_online(self):
         print "service3 is all ready"
 
     def offline(self, name):
