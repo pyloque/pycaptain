@@ -5,6 +5,7 @@ Captain sacrifices a little high availability for simplicity and performance.
 In most cases, we dont have so many machines as google/amazon.
 The possibility of machine crashing is very low, high Availability is not so abviously important yet.
 But the market only provides zookeeper/etcd/consul, they are complex, at least much complexer compared with captain.
+https://github.com/pyloque/captain
 
 Use Captain Python Client
 ---------------------------
