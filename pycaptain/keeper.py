@@ -16,10 +16,10 @@ class ServiceKeeper(object):
     '''
     def __init__(self, client):
         self.client = client
+        self.stop_event = threading.Event()
         self.keepalive = 10
         self.check_interval = 1000
         self.last_keep_ts = 0
-        self.stop = False
 
     def start(self):
         t = threading.Thread(target=self.loop)
@@ -27,7 +27,7 @@ class ServiceKeeper(object):
         t.start()
 
     def loop(self):
-        while not self.stop:
+        while not self.stop_event.is_set():
             self.client.shuffle_url_root()
             try:
                 self.watch()
@@ -37,7 +37,7 @@ class ServiceKeeper(object):
                 self.keep()
             except RequestException:
                 traceback.print_exc()
-            time.sleep(self.check_interval/1000.0)
+            self.stop_event.wait(self.check_interval/1000.0)
 
     def watch(self):
         if not self.client.check_dirty():
@@ -53,4 +53,4 @@ class ServiceKeeper(object):
             self.last_keep_ts = now
 
     def quit(self):
-        self.stop = True
+        self.stop_event.set()

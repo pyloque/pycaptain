@@ -8,6 +8,7 @@ import time
 import atexit
 import random
 import traceback
+import threading
 import requests
 from requests.exceptions import RequestException
 
@@ -41,6 +42,7 @@ class CaptainClient(object):
         self.failovers = {}
         self.provided = {}
         self.observers = []
+        self.waiter = None
         self._url_root = ""
 
     @classmethod
@@ -176,7 +178,17 @@ class CaptainClient(object):
         for observer in self.observers:
             observer.online(name)
         if not oldstate and self.all_healthy():
+            self.all_online()
+
+    def all_online(self):
+        '''
+        all dependent services are ready, revoke callbacks
+        '''
+        for observer in self.observers:
             observer.all_online()
+        waiter = self.waiter
+        if waiter is not None:
+            waiter.set()
 
     def offline(self, name):
         '''
@@ -216,8 +228,17 @@ class CaptainClient(object):
         '''
         self.keeper.start()
         if not self.watched:
-            for observer in self.observers:
-                observer.all_online()
+            self.all_online()
+        if self.waiter is not None:
+            self.waiter.wait()
+            self.waiter = None
+
+    def wait_until_all_online(self):
+        '''
+        wait until all dependent services are ready
+        '''
+        self.waiter = threading.Event()
+        return self
 
     def stop_on_exit(self):
         '''

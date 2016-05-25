@@ -37,6 +37,7 @@ client = CaptainClient([ServiceItem("localhost", 6789), ServiceItem("localhost",
     .keepalive(10) # set keepalive heartbeat in seconds for provided service
     .check_interval(1000) # set check interval in milliseconds for watched services
     .stop_on_exit() # cancel service before python vm quit
+    .wait_until_all_online() # let start method block until all dependent services are ready
     .start())
 client.hang() # hang just for test
 ```
