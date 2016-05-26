@@ -20,13 +20,13 @@ class IServiceObserver(object):
     '''
     service state callback
     '''
-    def online(self, name):
+    def online(self, client, name):
         pass
 
-    def all_online(self):
+    def all_online(self, client):
         pass
 
-    def offline(self, name):
+    def offline(self, client, name):
         pass
 
 
@@ -176,7 +176,7 @@ class CaptainClient(object):
         oldstate = self.all_healthy()
         self.watched[name] = True
         for observer in self.observers:
-            observer.online(name)
+            observer.online(self, name)
         if not oldstate and self.all_healthy():
             self.all_online()
 
@@ -185,7 +185,7 @@ class CaptainClient(object):
         all dependent services are ready, revoke callbacks
         '''
         for observer in self.observers:
-            observer.all_online()
+            observer.all_online(self)
         waiter = self.waiter
         if waiter is not None:
             waiter.set()
@@ -196,7 +196,7 @@ class CaptainClient(object):
         '''
         self.watched[name] = False
         for observer in self.observers:
-            observer.offline(name)
+            observer.offline(self, name)
 
     def healthy(self, name):
         '''
