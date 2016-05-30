@@ -18,7 +18,8 @@ class ServiceCallback(IServiceObserver):
         print key, client.get_kv(key)
 
 
-client = CaptainClient.origin("localhost", 6789)
+origins = [ServiceItem("localhost", 6789), ServiceItem("localhost", 6790)]
+client = CaptainClient(origins)
 (client.provide("service1", ServiceItem("localhost", 6101))
     .observe(ServiceCallback())
     .watch_kv("project_settings_service1")

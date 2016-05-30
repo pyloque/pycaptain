@@ -13,6 +13,7 @@ import requests
 from requests.exceptions import RequestException
 
 from .service import LocalService, ServiceItem
+from .service import ORIGIN_DEFAULT_PROBE
 from .kv import LocalKv
 from .keeper import ServiceKeeper
 
@@ -77,6 +78,19 @@ class CaptainClient(object):
         if not self.current_origin:
             self.shuffle_origin()
         return self.current_origin.url_root
+
+    def on_origin_success(self):
+        '''
+        current origin available, recover probe
+        '''
+        self.current_origin.probe = ORIGIN_DEFAULT_PROBE
+
+    def on_origin_fail(self):
+        '''
+        current origin unavailable, decrease probe
+        '''
+        if self.current_origin.probe > 1:
+            self.current_origin.probe >>= 1
 
     def check_dirty(self):
         '''

@@ -4,9 +4,9 @@
 captain client implementation
 '''
 
+import logging
 import time
 import threading
-import traceback
 from requests.exceptions import RequestException
 
 
@@ -29,14 +29,21 @@ class ServiceKeeper(object):
     def loop(self):
         while not self.stop_event.is_set():
             self.client.shuffle_origin()
+            flag = True
             try:
                 self.watch()
-            except RequestException:
-                traceback.print_exc()
+            except RequestException, e:
+                logging.error("watch versions failed", exc_info=e)
+                flag = False
             try:
                 self.keep()
             except RequestException:
-                traceback.print_exc()
+                logging.error("keep service failed", exc_info=e)
+                flag = False
+            if flag:
+                self.client.on_origin_success()
+            else:
+                self.client.on_origin_fail()
             self.stop_event.wait(self.check_interval/1000.0)
 
     def watch(self):
