@@ -13,6 +13,7 @@ import requests
 from requests.exceptions import RequestException
 
 from .service import LocalService, ServiceItem
+from .kv import LocalKv
 from .keeper import ServiceKeeper
 
 
@@ -29,6 +30,9 @@ class IServiceObserver(object):
     def offline(self, client, name):
         pass
 
+    def kv_update(self, client, key):
+        pass
+
 
 class CaptainClient(object):
     '''
@@ -36,14 +40,15 @@ class CaptainClient(object):
     '''
     def __init__(self, origins):
         self.origins = origins
-        self.local = LocalService()
+        self.services = LocalService()
+        self.kvs = LocalKv()
         self.keeper = ServiceKeeper(self)
         self.watched = {}
-        self.failovers = {}
+        self.watched_kvs = set()
         self.provided = {}
         self.observers = []
         self.waiter = None
-        self._url_root = ""
+        self.current_origin = None
 
     @classmethod
     def origin(cls, host, port):
@@ -52,30 +57,41 @@ class CaptainClient(object):
         '''
         return cls([ServiceItem(host, port)])
 
-    def shuffle_url_root(self):
+    def shuffle_origin(self):
         '''
-        refresh current url root
+        refresh current origin
         '''
-        ind = random.randint(0, len(self.origins) - 1)
-        self._url_root = self.origins[ind].url_root
+        total_probe = 0
+        for origin in self.origins:
+            total_probe += origin.probe
+        rand_probe = random.randint(0, total_probe)
+        acc_probe = 0
+        for origin in self.origins:
+            acc_probe += origin.probe
+            if acc_probe > rand_probe:
+                self.current_origin = origin
+                break
 
     @property
     def url_root(self):
-        if not self._url_root:
-            self.shuffle_url_root()
-        return self._url_root
+        if not self.current_origin:
+            self.shuffle_origin()
+        return self.current_origin.url_root
 
     def check_dirty(self):
         '''
-        check captain global version
+            check service and kv version
         '''
-        params = {"version": self.local.global_version}
-        url = self.url_root + "/api/service/dirty"
-        js = requests.get(url, params=params).json()
-        self.local.global_version = js["version"]
-        return js["dirty"]
+        url = self.url_root + "/api/version"
+        js = requests.get(url).json()
+        flags = [False, False]
+        if js["service.version"] != self.services.global_version:
+            flags[0] = True
+        if js["kv.version"] != self.kvs.global_version:
+            flags[1] = True
+        return flags
 
-    def check_versions(self):
+    def check_service_versions(self):
         '''
         check versions for multiple services
         '''
@@ -86,13 +102,28 @@ class CaptainClient(object):
         url = self.url_root + "/api/service/version"
         js = requests.get(url, params=params).json()
         for name, version in js["versions"].items():
-            if self.local.get_version(name) != version:
+            if self.services.get_version(name) != version:
                 dirties.add(name)
+        return dirties
+
+    def check_kv_versions(self):
+        '''
+        check versions for multiple services
+        '''
+        dirties = set()
+        if not self.watched_kvs:
+            return dirties
+        params = {"key": self.watched_kvs}
+        url = self.url_root + "/api/kv/version"
+        js = requests.get(url, params=params).json()
+        for key, version in js["versions"].items():
+            if self.kvs.get_version(key) != version:
+                dirties.add(key)
         return dirties
 
     def reload_service(self, name):
         '''
-        reload service information to local
+        reload service information to services
         '''
         params = {"name": name}
         url = self.url_root + "/api/service/set"
@@ -101,12 +132,23 @@ class CaptainClient(object):
         for item in js["services"]:
             item = ServiceItem(item["host"], item["port"], item["ttl"])
             services.append(item)
-        self.local.set_version(name, js["version"])
-        self.local.replace_service(name, services)
+        self.services.set_version(name, js["version"])
+        self.services.replace_service(name, services)
         if not self.healthy(name) and services:
             self.online(name)
         if self.healthy(name) and not services:
             self.offline(name)
+
+    def reload_kv(self, key):
+        '''
+        reload key value information
+        '''
+        params = {"key": key}
+        url = self.url_root + "/api/kv/get"
+        js = requests.get(url, params=params).json()
+        self.kvs.set_version(key, js["kv"]["version"])
+        self.kvs.replace_kv(key, js["kv"]["value"])
+        self.kv_update(key)
 
     def keep_service(self):
         '''
@@ -139,14 +181,23 @@ class CaptainClient(object):
         '''
         for name in names:
             self.watched[name] = False
-            self.local.init_service(name)
+            self.services.init_service(name)
+        return self
+
+    def watch_kv(self, *keys):
+        '''
+        watch service
+        '''
+        for key in keys:
+            self.watched_kvs.add(key)
+            self.kvs.init_kv(key)
         return self
 
     def failover(self, name, *items):
         '''
         add backup services incase no dependent services provided
         '''
-        self.failovers.put(name, items)
+        self.services.failover(name, items)
         return self
 
     def provide(self, name, service):
@@ -160,7 +211,13 @@ class CaptainClient(object):
         '''
         select a service for name
         '''
-        return self.local.random_service(name, self.failovers.get(name))
+        return self.services.random_service(name, self.failovers.get(name))
+
+    def get_kv(self, key):
+        '''
+        get key value information from memory
+        '''
+        return self.kvs.get_kv(key)
 
     def observe(self, observer):
         '''
@@ -197,6 +254,13 @@ class CaptainClient(object):
         self.watched[name] = False
         for observer in self.observers:
             observer.offline(self, name)
+
+    def kv_update(self, key):
+        '''
+        key value is updated, revoke callbacks
+        '''
+        for observer in self.observers:
+            observer.kv_update(self, key)
 
     def healthy(self, name):
         '''

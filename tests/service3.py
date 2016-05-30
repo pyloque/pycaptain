@@ -17,7 +17,7 @@ class ServiceCallback(IServiceObserver):
 
 client = CaptainClient.origin("localhost", 6789)
 (client.watch("service1", "service2")
-    .provide("service3", ServiceItem("localhost", 6300))
+    .provide("service3", ServiceItem("localhost", 6301))
     .observe(ServiceCallback())
     .stop_on_exit()
     .start())

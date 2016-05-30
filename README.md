@@ -26,6 +26,9 @@ class ServiceCallback(IServiceObserver):
     def offline(self, client, name):
         print name, "is offline"
 
+    def kv_update(self, client, key):
+        print key, self.client.get_kv(key)
+
 
 # connect to multiple captain servers
 client = CaptainClient([ServiceItem("localhost", 6789), ServiceItem("localhost", 6790)])
@@ -34,6 +37,7 @@ client = CaptainClient([ServiceItem("localhost", 6789), ServiceItem("localhost",
     .failover("service1", ServiceItem("localhost", 6100), ServiceItem("localhost", 6101)) # backup services
     .provide("service4", ServiceItem("localhost", 6400)) # provide service
     .observe(ServiceCallback()) # add observer for dependent service's event
+    .watch_kv("project_settings_service1")
     .keepalive(10) # set keepalive heartbeat in seconds for provided service
     .check_interval(1000) # set check interval in milliseconds for watched services
     .stop_on_exit() # cancel service before python vm quit

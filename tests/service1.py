@@ -14,10 +14,14 @@ class ServiceCallback(IServiceObserver):
     def offline(self, client, name):
         print name, "is offline"
 
+    def kv_update(self, client, key):
+        print key, client.get_kv(key)
+
 
 client = CaptainClient.origin("localhost", 6789)
-(client.provide("service1", ServiceItem("localhost", 6100))
+(client.provide("service1", ServiceItem("localhost", 6101))
     .observe(ServiceCallback())
+    .watch_kv("project_settings_service1")
     .stop_on_exit()
     .start())
 client.hang()

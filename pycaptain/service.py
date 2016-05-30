@@ -13,6 +13,9 @@ class CaptainError(Exception):
     pass
 
 
+ORIGIN_DEFAULT_PROBE = 1024
+
+
 class ServiceItem(object):
     '''
     service definition
@@ -22,6 +25,7 @@ class ServiceItem(object):
         self.host = host
         self.port = port
         self.ttl = ttl
+        self.probe = ORIGIN_DEFAULT_PROBE
 
     @property
     def url_root(self):
@@ -40,6 +44,13 @@ class LocalService(object):
         self.global_version = -1
         self.versions = {}
         self.service_lists = {}
+        self.failovers = {}
+
+    def set_failovers(self, name, items):
+        '''
+        set failover services
+        '''
+        self.failovers[name] = items
 
     def get_version(self, name):
         '''
@@ -70,6 +81,7 @@ class LocalService(object):
         select a service randomly
         '''
         services = self.service_lists[name]
+        failovers = self.failovers.get(name)
         if not services:
             if not failovers:
                 raise CaptainError("no service provided for name=" + name)

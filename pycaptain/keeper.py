@@ -28,7 +28,7 @@ class ServiceKeeper(object):
 
     def loop(self):
         while not self.stop_event.is_set():
-            self.client.shuffle_url_root()
+            self.client.shuffle_origin()
             try:
                 self.watch()
             except RequestException:
@@ -40,11 +40,15 @@ class ServiceKeeper(object):
             self.stop_event.wait(self.check_interval/1000.0)
 
     def watch(self):
-        if not self.client.check_dirty():
-            return
-        dirties = self.client.check_versions()
-        for name in dirties:
-            self.client.reload_service(name)
+        flags = self.client.check_dirty()
+        if flags[0]:
+            dirties = self.client.check_service_versions()
+            for name in dirties:
+                self.client.reload_service(name)
+        if flags[1]:
+            dirties = self.client.check_kv_versions()
+            for key in dirties:
+                self.client.reload_kv(key)
 
     def keep(self):
         now = int(time.time())
