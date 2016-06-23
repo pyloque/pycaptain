@@ -144,7 +144,7 @@ class CaptainClient(object):
         js = requests.get(url, params=params).json()
         services = []
         for item in js["services"]:
-            item = ServiceItem(item["host"], item["port"], item["ttl"])
+            item = ServiceItem(item["host"], item["port"], item["ttl"], item["payload"])
             services.append(item)
         self.services.set_version(name, js["version"])
         self.services.replace_service(name, services)
@@ -173,7 +173,8 @@ class CaptainClient(object):
                 "name": name,
                 "host": item.host,
                 "port": item.port,
-                "ttl": item.ttl}
+                "ttl": item.ttl,
+                "payload": item.payload}
             url = self.url_root + "/api/service/keep"
             requests.get(url, params=params)
 

@@ -21,10 +21,11 @@ class ServiceItem(object):
     service definition
     '''
 
-    def __init__(self, host, port, ttl=30):
+    def __init__(self, host, port, ttl=30, payload=""):
         self.host = host
         self.port = port
         self.ttl = ttl
+        self.payload = payload
         self.probe = ORIGIN_DEFAULT_PROBE
 
     @property
