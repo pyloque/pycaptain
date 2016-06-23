@@ -144,7 +144,8 @@ class CaptainClient(object):
         js = requests.get(url, params=params).json()
         services = []
         for item in js["services"]:
-            item = ServiceItem(item["host"], item["port"], item["ttl"], item["payload"])
+            item = ServiceItem(
+                item["host"], item["port"], item["ttl"], item["payload"])
             services.append(item)
         self.services.set_version(name, js["version"])
         self.services.replace_service(name, services)
@@ -305,6 +306,8 @@ class CaptainClient(object):
         '''
         start captain client
         '''
+        for key in self.watched_kvs:
+            self.reload_kv(key)
         self.keeper.start()
         if not self.watched:
             self.all_online()
