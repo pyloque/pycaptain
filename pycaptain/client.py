@@ -4,6 +4,7 @@
 captain client implementation
 '''
 
+import json
 import time
 import atexit
 import random
@@ -164,6 +165,14 @@ class CaptainClient(object):
         self.kvs.set_version(key, js["kv"]["version"])
         self.kvs.replace_kv(key, js["kv"]["value"])
         self.kv_update(key)
+
+    def update_kv(self, key, value):
+        '''
+        update key value information
+        '''
+        url = self.url_root + "/api/kv/set"
+        requests.post(
+            url, data={"key": key, "value": json.dumps(value)}).json()
 
     def keep_service(self):
         '''
