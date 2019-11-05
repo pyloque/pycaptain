@@ -64,8 +64,6 @@ class CaptainClient(object):
         refresh current origin
         random find origin to current origin
         '''
-        total_probe = 0
-        probe = []
         self.current_origin = random.choice(self.origins)
 
     @property
