@@ -62,17 +62,11 @@ class CaptainClient(object):
     def shuffle_origin(self):
         '''
         refresh current origin
+        random find origin to current origin
         '''
         total_probe = 0
-        for origin in self.origins:
-            total_probe += origin.probe
-        rand_probe = random.randint(0, total_probe)
-        acc_probe = 0
-        for origin in self.origins:
-            acc_probe += origin.probe
-            if acc_probe > rand_probe:
-                self.current_origin = origin
-                break
+        probe = []
+        self.current_origin = random.choice(self.origins)
 
     @property
     def url_root(self):
